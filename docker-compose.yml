@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  app:
+    image: sandbox:0.1-SNAPSHOT
+    networks:
+      - nw-sandbox
+    ports:
+      - 8080:8080
+    depends_on:
+      - zipkin
+    environment:
+      JAVA_TOOL_OPTIONS: -Dopencensus-scala.trace.exporters.zipkin.enabled=true
+      ZIPKIN_HOST: zipkin
+    entrypoint:
+      - "java"
+#      - "-agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=sandbox"
+#      - -Dlog-level=INFO
+#      - -Dopencensus-scala.trace.exporters.logging.enabled=true
+      - "-cp"
+      - "/app/resources:/app/classes:/app/libs/*"
+      - "ninja.grimrose.sandbox.Main"
+    command:
+      - start
+      - --host=0.0.0.0
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - nw-sandbox
+    ports:
+      - 9090:9090
+    depends_on:
+      - app
+      - zipkin
+
+  zipkin:
+    image: openzipkin/zipkin:2.12.9
+    environment:
+      STORAGE_TYPE: mem
+    networks:
+      - nw-sandbox
+    ports:
+      - 9411:9411
+
+networks:
+  nw-sandbox: {}

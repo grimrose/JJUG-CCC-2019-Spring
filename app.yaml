@@ -1,0 +1,9 @@
+runtime: custom
+env: flex
+
+automatic_scaling:
+  min_num_instances: 1
+  max_num_instances: 5
+
+env_variables:
+  JAVA_TOOL_OPTIONS: -Dopencensus-scala.trace.exporters.stackdriver.enabled=true -Dlogback.configurationFile=logback-gae.xml

@@ -1,0 +1,117 @@
+plugins {
+    id 'scala'
+    id 'application'
+    id 'com.google.cloud.tools.jib' version '1.2.0'
+    id 'de.undercouch.download' version '3.4.0'
+    id "com.gorylenko.gradle-git-properties" version "2.0.0"
+    id "com.diffplug.gradle.spotless" version "3.23.0"
+}
+
+ext {
+    openCensusVersion = '0.20.0' // opencensus-scala's version
+    prometheusVersion = '0.6.0'
+    slf4jVersion = '1.7.25'
+    airframeVersion = '19.4.2'
+    akkaVersion = '2.5.21'
+    akkaHttpVersion = '10.1.7'
+}
+
+group = "ninja.grimrose.sandbox"
+version = "0.1-SNAPSHOT"
+
+sourceCompatibility = targetCompatibility = JavaVersion.VERSION_1_8
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.metaClass.useAnt = false
+    scalaCompileOptions.additionalParameters = [
+            '-feature',
+            '-Xfuture',
+            '-language:higherKinds',
+            '-deprecation',
+            '-unchecked'
+    ]
+}
+
+mainClassName = 'ninja.grimrose.sandbox.Main'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.scala-lang:scala-library:2.12.8'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.scalatest:scalatest_2.12:3.0.5'
+
+    // akka
+    compile group: 'com.typesafe.akka', name: 'akka-http_2.12', version: akkaHttpVersion
+    compile group: 'com.typesafe.akka', name: 'akka-stream_2.12', version: akkaVersion
+    compile group: 'com.typesafe.akka', name: 'akka-slf4j_2.12', version: akkaVersion
+
+    compile group: 'de.heikoseeberger', name: 'akka-http-jackson_2.12', version: '1.25.2'
+
+    // airframe
+    compile group: 'org.wvlet.airframe', name: 'airframe_2.12', version: airframeVersion
+    compile group: 'org.wvlet.airframe', name: 'airframe-launcher_2.12', version: airframeVersion
+
+    // logging
+    compile group: 'org.slf4j', name: 'slf4j-api', version: slf4jVersion
+    compile group: 'org.slf4j', name: 'jul-to-slf4j', version: slf4jVersion
+
+    runtime group: 'net.logstash.logback', name: 'logstash-logback-encoder', version: '5.3'
+    runtime group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
+
+    // stackdriver
+    runtime group: 'com.google.cloud', name: 'google-cloud-logging-logback', version: '0.90.0-alpha'
+
+    // opencensus
+    compile group: 'io.opencensus', name: 'opencensus-api', version: openCensusVersion
+    runtime group: 'io.opencensus', name: 'opencensus-impl', version: openCensusVersion
+
+    compile group: 'io.opencensus', name: 'opencensus-exporter-trace-logging', version: openCensusVersion
+    compile group: 'io.opencensus', name: 'opencensus-exporter-trace-zipkin', version: openCensusVersion
+    compile group: 'io.opencensus', name: 'opencensus-exporter-trace-stackdriver', version: openCensusVersion
+
+    compile group: 'io.opencensus', name: 'opencensus-contrib-log-correlation-stackdriver', version: openCensusVersion
+    compile group: 'io.opencensus', name: 'opencensus-contrib-http-util', version: openCensusVersion
+
+    compile group: 'io.opencensus', name: 'opencensus-exporter-stats-stackdriver', version: openCensusVersion
+    compile group: 'io.opencensus', name: 'opencensus-exporter-stats-prometheus', version: openCensusVersion
+
+    compile(group: 'com.github.sebruck', name: 'opencensus-scala-akka-http_2.12', version: '0.6.3') {
+        exclude group: 'io.opencensus', module: 'opencensus-impl'
+        exclude group: 'com.typesafe.akka', module: 'akka-http_2.12'
+        exclude group: 'com.typesafe.akka', module: 'akka-stream_2.12'
+    }
+
+    // prometheus
+    compile group: 'io.prometheus', name: 'simpleclient_common', version: prometheusVersion
+    compile group: 'io.prometheus', name: 'simpleclient_hotspot', version: prometheusVersion
+    compile group: 'io.prometheus', name: 'simpleclient_logback', version: prometheusVersion
+
+    // ULID
+    compile group: 'de.huxhorn.sulky', name: 'de.huxhorn.sulky.ulid', version: '8.2.0'
+}
+
+jib {
+    from {
+        image = 'gcr.io/google-appengine/openjdk:8'
+    }
+    container {
+        useCurrentTimestamp = true
+        jvmFlags = [
+                '-agentpath:/opt/cprof/profiler_java_agent.so=-cprof_service=' + project.name
+        ]
+        args = [
+                'start',
+                '--host=0.0.0.0'
+        ]
+    }
+}
+
+spotless {
+    scala {
+        scalafmt().configFile("${rootProject.projectDir}/.scalafmt.conf")
+    }
+}

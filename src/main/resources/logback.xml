@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <resetJUL>true</resetJUL>
+    </contextListener>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <charset>utf-8</charset>
+            <pattern>
+                %blue(%date) %highlight(%-5level) [%cyan(%t)] %white(%logger{0}) - %highlight(%msg) %n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <appender name="PROM" class="io.prometheus.client.logback.InstrumentedAppender"/>
+
+    <root level="${log-level:-DEBUG}">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="PROM"/>
+    </root>
+</configuration>
